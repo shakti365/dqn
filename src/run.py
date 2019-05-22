@@ -1,39 +1,61 @@
 from agent import Agent
-
-render = True
-memory_capacity = 1000
-agent = Agent(render=render, model=None, memory_capacity=memory_capacity)
-agent.run_episode(num_episodes=5)
-print (len(agent.memory.states))
-print (max(agent.memory.episodes))
+from dqn import DQN
 
 # Initialize replay memory to capcity N
+render = False
+memory_capacity = 10000
+agent = Agent(render=render, model=None, memory_capacity=memory_capacity)
+agent.run_episode(num_episodes=100)
 
-# Initialize Q network parameters
-# Copy Q network weights to target network weights
+num_episodes = 1
+num_steps = 10
+num_samples = 32
+
+config = dict()
+config['epochs'] = 1
+config['learning_rate'] = 0.001
+config['target_update'] = 10
+config['gamma'] = 0.9
+config['model_name'] = 'test'
+config['seed'] = 42
+config['log_step'] = 1
+config['train_batch_size'] = 32
+config['valid_batch_size'] = 32
+config['optimizer'] = 'rmsprop'
+config['initializer'] = 'uniform'
+config['logs_path'] = '../data/models'
+config['split'] = 0.9
+config['num_actions'] = 2
+
+dqn = DQN(config)
+
+global_step = 0
+done = False
 
 # For episode:
+for episode in range(num_episodes):
 
-    # Initialize a state list s
-
-    # Observe an input x and push to state list s
-
-    # Get state from processing the state list s
+    # Observe current state
+    agent.current_observation = agent.reset_environment()
 
     # For step:
-
+    while not done:
+        transition = dict()
+        transition['current_state'] = agent.get_state(agent.current_observation)
         # Get recommended action from the policy
-
+        transition['action'] = agent.get_action(agent.current_observation)
         # Observe next state x and reward r
-
-        # Push next state to state list
-
-        # Get next state from processing the state list
+        transition['next_state'], transition['reward'], done = agent.get_transitions(transition['action'])
+        if done is True:
+            transition['end'] = 1
+        else:
+            transition['end'] = 0
 
         # Push transition to replay memory
+        agent.memory.add_sample(episode, transition)
 
-        # Sample minbatch from replay memory
+        if global_step == 0:
+            agent.model = dqn
 
-        # Optimize TD loss
-
-        # Copy weights every 10K steps
+        agent.learn(step=global_step, sample_size=num_samples)
+        global_step += 1
