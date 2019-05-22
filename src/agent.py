@@ -8,7 +8,7 @@ class Agent:
     def __init__(self, render=False, model=None, memory_capacity=1000000,
                  state_buffer_size=4):
         # create an environment
-        self.environment = gym.make('MountainCarContinuous-v0')
+        self.environment = gym.make('CartPole-v0')
         # reset environment when an agent is initialized
         self.current_observation = self.reset_environment()
         self.render = render
@@ -48,15 +48,23 @@ class Agent:
 
     def get_transitions(self, action):
         """Take one step in the environment and return the observations"""
+        action = int(action)
         next_observation, reward, done, _ = self.environment.step(action)
         if self.render:
             self.environment.render()
         next_state = self.get_state(next_observation)
+        self.current_observation = next_observation
+
         return next_state, reward, done
 
     def run_episode(self, num_episodes=1):
         """run episodes `num_episodes` times using `model` policy"""
         for episode in range(num_episodes):
+
+            if len(self.memory.states) > self.memory.capacity:
+                print ("replay memory full to its capacity {}".format(self.memory.capacity))
+                break
+
             self.current_observation = self.reset_environment()
             episode_id = self.memory.create_episode()
 
@@ -67,18 +75,20 @@ class Agent:
                 transition['current_state'] = self.get_state(self.current_observation)
                 transition['action'] = self.get_action(self.current_observation)
                 transition['next_state'], transition['reward'], done = self.get_transitions(transition['action'])
+                if done is True:
+                    transition['end'] = 1
+                else:
+                    transition['end'] = 0
 
                 self.memory.add_sample(episode_id, transition)
 
-            self.memory.add_episode(episode_id)
-
-    def learn(self, step=0, restore=False):
+    def learn(self, step=0, restore=False, sample_size=1):
         """Train model using transitions in replay memory"""
         if self.model is None:
             raise Exception("This agent has no brain! Add a model which implements fit() function to train.")
 
         # Sample array of transitions from replay memory.
-        transition_matrices = self.memory.fetch_sample()
+        transition_matrices = self.memory.fetch_sample(sample_size)
 
         if step != 0:
             restore = True
