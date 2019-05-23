@@ -2,19 +2,19 @@ from agent import Agent
 from dqn import DQN
 
 # Initialize replay memory to capcity N
-render = False
+render = True
 memory_capacity = 10000
 agent = Agent(render=render, model=None, memory_capacity=memory_capacity)
-agent.run_episode(num_episodes=100)
+agent.run_episode(num_episodes=5)
 
-num_episodes = 1
+num_episodes = 3
 num_steps = 10
-num_samples = 32
+num_samples = 64
 
 config = dict()
 config['epochs'] = 1
 config['learning_rate'] = 0.001
-config['target_update'] = 10
+config['target_update'] = 100
 config['gamma'] = 0.9
 config['model_name'] = 'test'
 config['seed'] = 42
@@ -30,7 +30,7 @@ config['num_actions'] = 2
 dqn = DQN(config)
 
 global_step = 0
-done = False
+total_episode_reward = 0
 
 # For episode:
 for episode in range(num_episodes):
@@ -38,6 +38,7 @@ for episode in range(num_episodes):
     # Observe current state
     agent.current_observation = agent.reset_environment()
 
+    done = False
     # For step:
     while not done:
         transition = dict()
@@ -59,3 +60,6 @@ for episode in range(num_episodes):
 
         agent.learn(step=global_step, sample_size=num_samples)
         global_step += 1
+        total_episode_reward += transition['reward']
+
+    agent.log_rewards(total_episode_reward, global_step)

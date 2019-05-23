@@ -110,6 +110,7 @@ class DQN:
             with tf.name_scope("primary"):
                 q_values = self.q_network(current_states,
                                      variable_scope="q_network", trainable=True)
+                tf.summary.histogram("q_value", q_values)
 
                 actions_x_idx = tf.reshape(actions, [-1])
                 actions_y_idx = tf.range(start=0, limit=tf.shape(actions)[0])
@@ -122,6 +123,7 @@ class DQN:
                 target_q_values = self.q_network(next_states,
                                             variable_scope="target_q_network",
                                            trainable=False)
+                tf.summary.histogram("target_q_vallue", target_q_values)
                 max_q_target = tf.reshape(tf.reduce_max(target_q_values, axis=1), [-1, 1])
 
                 td_target = tf.add(rewards, self.gamma * max_q_target * end)

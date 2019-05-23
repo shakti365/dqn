@@ -1,6 +1,7 @@
 import gym
 from replay_memory import ReplayMemory
 from collections import deque
+import tensorflow as tf
 
 
 class Agent:
@@ -17,6 +18,10 @@ class Agent:
         self.memory = ReplayMemory(capacity=memory_capacity)
         self.state_buffer = deque(list())
         self.state_buffer_size = state_buffer_size
+
+        # Logging variables initialization
+        self.episode_count = 0
+        self.total_reward = 0
 
     def reset_environment(self):
         current_observation = self.environment.reset()
@@ -95,3 +100,13 @@ class Agent:
 
         # Fit the SAC model.
         self.model.fit(transition_matrices, restore=restore, global_step=step)
+
+    def log_rewards(self, episode_total_reward, step):
+        self.episode_count += 1
+        self.total_reward += episode_total_reward
+        average_reward = self.total_reward / self.episode_count
+        writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/train')
+        summary = tf.Summary(value=[tf.Summary.Value(tag="average_reward",
+                                                     simple_value=average_reward)])
+        writer.add_summary(summary, step)
+        print (step, average_reward)
