@@ -266,8 +266,8 @@ class DQN:
                 self.saver.restore(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))
 
             # Create file writer directory to store summary and events.
-            train_writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/train', sess.graph)
-            valid_writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/valid')
+            graph_writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/graph', sess.graph)
+            writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/train')
 
 
             # Initialize step count.
@@ -283,7 +283,7 @@ class DQN:
                     print (epoch, batch, train_loss)
 
                     # Log training dataset.
-                    train_writer.add_summary(train_summary, step)
+                    writer.add_summary(train_summary, step)
 
                     # Check if step to update Q target.
                     if step % self.target_update == 0:
@@ -291,6 +291,7 @@ class DQN:
 
                     step +=1
 
+                """
                 # Log results every step.
                 if epoch % self.log_step == 0:
 
@@ -303,6 +304,7 @@ class DQN:
 
                     # Log validation dataset.
                     valid_writer.add_summary(valid_summary, step)
+                """
 
             # Save model checkpoint.
             self.saver.save(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))

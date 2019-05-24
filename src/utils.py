@@ -3,7 +3,6 @@ from builtins import (bytes, str, open, super, range, zip, round, input, int, po
 
 import tensorflow as tf
 import numpy as np
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, roc_curve, roc_auc_score, f1_score, accuracy_score
 
 np.random.seed(42)
 

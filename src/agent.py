@@ -105,7 +105,7 @@ class Agent:
         self.episode_count += 1
         self.total_reward += episode_total_reward
         average_reward = self.total_reward / self.episode_count
-        writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/train')
+        writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/reward')
         summary = tf.Summary(value=[tf.Summary.Value(tag="average_reward",
                                                      simple_value=average_reward)])
         writer.add_summary(summary, step)
