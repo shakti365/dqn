@@ -1,16 +1,13 @@
 from agent import Agent
 from dqn import DQN
 from easy_tf_log import tflog
+import random
 
 # Initialize replay memory to capcity N
 render = False
 memory_capacity = 10000
 agent = Agent(render=render, model=None, memory_capacity=memory_capacity)
 agent.run_episode(num_episodes=50)
-
-num_episodes = 10
-num_steps = 10
-num_samples = 32
 
 config = dict()
 config['epochs'] = 1
@@ -30,6 +27,11 @@ config['num_actions'] = 2
 
 dqn = DQN(config)
 
+num_episodes = 10
+num_steps = 10
+num_samples = 32
+epsilon = 0.5
+
 global_step = 0
 total_reward = 0
 
@@ -46,8 +48,16 @@ for episode in range(num_episodes):
     while not done:
         transition = dict()
         transition['current_state'] = agent.get_state(agent.current_observation)
-        # Get recommended action from the policy
-        transition['action'] = agent.get_action(agent.current_observation)
+
+        # Epsilon greedy policy
+        if (random.uniform(0, 1) < epsilon) or (global_step == 0):
+            # Get a random action.
+            transition['action'] = agent.get_action(agent.current_observation,
+                                                   random=True)
+        else:
+            # Get recommended action from the policy
+            transition['action'] = agent.get_action(agent.current_observation)
+
         # Observe next state x and reward r
         transition['next_state'], transition['reward'], done = agent.get_transitions(transition['action'])
         if done is True:
@@ -68,7 +78,5 @@ for episode in range(num_episodes):
         global_step += 1
         total_episode_reward += transition['reward']
 
-    print ("episode: {} reward: {}".format(episode,total_episode_reward))
-    total_reward += total_episode_reward
-    print ("average reward: ", total_reward/(episode+1))
+    print ("episode: {} reward: {}".format(episode, total_episode_reward))
     agent.log_rewards(total_episode_reward, step=episode)

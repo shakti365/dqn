@@ -27,9 +27,9 @@ class Agent:
         current_observation = self.environment.reset()
         return current_observation
 
-    def get_action(self, current_state):
+    def get_action(self, current_state, random=False):
         """Fetch an action according to model policy"""
-        if self.model is None:
+        if self.model is None or random is True:
             action = self.environment.action_space.sample()
         else:
             action = self.model.predict(current_state)
@@ -102,11 +102,7 @@ class Agent:
         self.model.fit(transition_matrices, restore=restore, global_step=step)
 
     def log_rewards(self, episode_total_reward, step):
-        self.episode_count += 1
-        self.total_reward += episode_total_reward
-        average_reward = self.total_reward / self.episode_count
         writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/reward')
         summary = tf.Summary(value=[tf.Summary.Value(tag="average_reward",
-                                                     simple_value=average_reward)])
+                                                     simple_value=episode_total_reward)])
         writer.add_summary(summary, step)
-        print (step, average_reward)

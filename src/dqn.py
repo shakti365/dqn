@@ -252,10 +252,13 @@ class DQN:
 
         # Object to saver model checkpoints
         self.saver = tf.train.Saver()
-
+        run_options = tf.RunOptions(report_tensor_allocations_upon_oom = True)
         with tf.Session() as sess:
 
             # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            # Create file writer directory to store summary and events.
+            graph_writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/graph', sess.graph)
+            writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/train')
 
             # Initialize variables in graph.
             sess.run(tf.global_variables_initializer())
@@ -264,11 +267,6 @@ class DQN:
             # Restore model checkpoint.
             if restore:
                 self.saver.restore(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))
-
-            # Create file writer directory to store summary and events.
-            graph_writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/graph', sess.graph)
-            writer = tf.summary.FileWriter(self.TF_SUMMARY_DIR+'/train')
-
 
             # Initialize step count.
             step = global_step
@@ -279,14 +277,18 @@ class DQN:
 
                 for batch in range(self.num_train_batches):
 
-                    _, train_loss, train_summary = sess.run([optimize_op, loss_op, summary])
-                    print (epoch, batch, train_loss)
+                    _, train_loss, train_summary = sess.run([optimize_op,
+                                                             loss_op, summary],
+                                                           options=run_options)
+                    if epoch % self.log_step == 0:
+                        print ("training: ", step, train_loss)
 
                     # Log training dataset.
                     writer.add_summary(train_summary, step)
 
                     # Check if step to update Q target.
                     if step % self.target_update == 0:
+                        print ("copying parameters {}".format(step))
                         sess.run(copy_op)
 
                     step +=1
@@ -305,9 +307,8 @@ class DQN:
                     # Log validation dataset.
                     valid_writer.add_summary(valid_summary, step)
                 """
+                self.saver.save(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))
 
-            # Save model checkpoint.
-            self.saver.save(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))
             return step
 
     def predict(self, test_X):
@@ -326,12 +327,13 @@ class DQN:
 
         # Object to saver model checkpoints
         self.saver = tf.train.Saver()
-
+        run_options = tf.RunOptions(report_tensor_allocations_upon_oom = True)
         with tf.Session() as sess:
             # Restore model checkpoint.
             self.saver.restore(sess, self.CKPT_DIR+"{}.ckpt".format(self.model_name))
 
             # Result on test set batch.
             action_test = sess.run([action], {current_states:
-                                              test_X.reshape(-1, 4)})
+                                              test_X.reshape(-1, 4)},
+                                   options=run_options)
         return action_test[0]
