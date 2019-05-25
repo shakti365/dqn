@@ -4,6 +4,7 @@ import tensorflow as tf
 import math
 import utils
 from tensorflow.python import debug as tf_debug
+import json
 
 
 class DQN:
@@ -20,10 +21,10 @@ class DQN:
         self.valid_batch_size = config['valid_batch_size']
         self.optimizer = config['optimizer']
         self.initializer = config['initializer']
-        self.logs_path = config['logs_path']
-        self.SERVING_DIR = os.path.join(self.logs_path, self.model_name+'_serving', '1')
-        self.TF_SUMMARY_DIR = os.path.join(self.logs_path, self.model_name+'_summary')
-        self.CKPT_DIR = os.path.join(self.logs_path, self.model_name+'_checkpoint')
+        self.export_dir = config['export_dir']
+        self.SERVING_DIR = os.path.join(self.export_dir, self.model_name+'_serving', '1')
+        self.TF_SUMMARY_DIR = os.path.join(self.export_dir, self.model_name+'_summary')
+        self.CKPT_DIR = os.path.join(self.export_dir, self.model_name+'_checkpoint')
         self.split = config['split']
         self.action_dim = config['num_actions']
 
@@ -48,7 +49,7 @@ class DQN:
         if self.optimizer not in self.OPTIMIZERS.keys():
             raise ValueError("optimizer should be in {}".format(self.OPTIMIZERS.keys()))
         
-        if self.logs_path is None:
+        if self.export_dir is None:
             raise ValueError("export_dir cannot be empty")
 
     def input_fn(self, transition_matrices):
@@ -213,20 +214,20 @@ class DQN:
 
         # Check if the export directory is present,
         # if not present create new directory.
-        # if os.path.exists(self.export_dir) and restore is False:
-        #     raise ValueError("Export directory already exists. Please specify different export directory.")
-        # elif os.path.exists(self.export_dir) and restore:
-        #     print ("Restoring model from latest checkpoint.")
-        #     pass
-        # else:
-        #     os.mkdir(self.export_dir)
+        if os.path.exists(self.export_dir) and restore is False:
+            raise ValueError("Export directory already exists. Please specify different export directory.")
+        elif os.path.exists(self.export_dir) and restore:
+            print ("Restoring model from latest checkpoint.")
+            pass
+        else:
+            os.mkdir(self.export_dir)
 
         # self.builder=tf.saved_model.builder.SavedModelBuilder(self.SERVING_DIR)
 
         # Save model config
-        # params = self.get_params()
-        # with open(os.path.join(self.export_dir, 'params.json'), 'wb') as f:
-        #     json.dump(params, f)
+        params = self.get_params()
+        with open(os.path.join(self.export_dir, 'params.json'), 'w') as f:
+            json.dump(params, f)
 
 
         # Clear deafult graph stack and reset global graph definition.
@@ -337,3 +338,31 @@ class DQN:
                                               test_X.reshape(-1, 4)},
                                    options=run_options)
         return action_test[0]
+
+    def get_params(self, verbose=False):
+        """
+        Arguments with values of RNN.
+
+        Parameters
+        ----------
+            verbose: boolean
+                If True, returns all the class variables.
+
+        Returns
+        -------
+            params: dictionary
+                A dictionary of parameters in the model and their values.
+        """
+        params = dict()
+        exclude = set(('builder', 'MODELS', 'INITIALIZERS', 'OPTIMIZERS', 'LOSSES', 
+                       'CKPT_DIR', 'TF_SUMMARY_DIR', 'SERVING_DIR', 
+                       'prediction_signature', 'saver', 'export_dir'))
+        keys = self.__dict__.keys()
+
+        if verbose == False:
+            keys = list(set(keys) - exclude)
+
+        for param in keys:
+            params[param] = getattr(self, param)
+
+        return params

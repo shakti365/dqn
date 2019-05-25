@@ -1,7 +1,15 @@
+import os
 from agent import Agent
 from dqn import DQN
 from easy_tf_log import tflog
 import random
+from datetime import datetime
+import pytz
+
+uid = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d_%H:%M:%S")
+model_name = 'exp-1-{}'.format(uid)
+data_dir = os.path.join(os.pardir, 'data', 'models')
+export_dir = os.path.join(data_dir, model_name)
 
 # Initialize replay memory to capcity N
 render = False
@@ -14,14 +22,14 @@ config['epochs'] = 1
 config['learning_rate'] = 0.001
 config['target_update'] = 100
 config['gamma'] = 0.9
-config['model_name'] = 'test'
+config['model_name'] = model_name
 config['seed'] = 42
 config['log_step'] = 1
 config['train_batch_size'] = 32
 config['valid_batch_size'] = 32
 config['optimizer'] = 'rmsprop'
 config['initializer'] = 'uniform'
-config['logs_path'] = '../data/models'
+config['export_dir'] = export_dir
 config['split'] = 0.9
 config['num_actions'] = 2
 
