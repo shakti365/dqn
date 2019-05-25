@@ -5,6 +5,7 @@ from easy_tf_log import tflog
 import random
 from datetime import datetime
 import pytz
+import numpy as np
 
 uid = datetime.now(pytz.timezone('Asia/Kolkata')).strftime("%Y-%m-%d_%H:%M:%S")
 model_name = 'exp-1-{}'.format(uid)
@@ -15,18 +16,18 @@ export_dir = os.path.join(data_dir, model_name)
 render = False
 memory_capacity = 10000
 agent = Agent(render=render, model=None, memory_capacity=memory_capacity)
-agent.run_episode(num_episodes=50)
+agent.run_episode(num_episodes=100)
 
 config = dict()
 config['epochs'] = 1
 config['learning_rate'] = 0.001
-config['target_update'] = 100
+config['target_update'] = 1000
 config['gamma'] = 0.9
 config['model_name'] = model_name
 config['seed'] = 42
 config['log_step'] = 1
-config['train_batch_size'] = 32
-config['valid_batch_size'] = 32
+config['train_batch_size'] = 64
+config['valid_batch_size'] = 64
 config['optimizer'] = 'rmsprop'
 config['initializer'] = 'uniform'
 config['export_dir'] = export_dir
@@ -35,10 +36,9 @@ config['num_actions'] = 2
 
 dqn = DQN(config)
 
-num_episodes = 10
-num_steps = 10
-num_samples = 32
-epsilon = 0.5
+num_episodes = 100
+num_samples = 64
+epsilon = np.logspace(start=1, stop=3, base=0.5, num=num_episodes)
 
 global_step = 0
 total_reward = 0
@@ -58,7 +58,7 @@ for episode in range(num_episodes):
         transition['current_state'] = agent.get_state(agent.current_observation)
 
         # Epsilon greedy policy
-        if (random.uniform(0, 1) < epsilon) or (global_step == 0):
+        if (random.uniform(0, 1) < epsilon[episode]) or (global_step == 0):
             # Get a random action.
             transition['action'] = agent.get_action(agent.current_observation,
                                                    random=True)
