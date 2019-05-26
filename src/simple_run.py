@@ -37,6 +37,8 @@ config['num_actions'] = 2
 
 dqn = DQN(config)
 
+agent.model = dqn
+
 num_episodes = 100
 num_steps = 10
 num_samples = 32
@@ -67,7 +69,6 @@ action = tf.argmax(q_values, axis=1)
 # Get loss and optimization ops
 optimize_op, loss_op, summary = dqn.train(current_states, actions,
                                            rewards, next_states, end)
-
 
 # Create model copy op.
 copy_op = dqn.copy(primary_scope='q_network',
@@ -140,17 +141,9 @@ with tf.Session() as sess:
             if global_step % dqn.target_update == 0:
                 print ("copying parameters {}".format(global_step))
                 sess.run(copy_op)
-            """
-            if global_step == 0:
-                agent.model = dqn
 
-            if episode == 0 and global_step == 0:
-                agent.learn(step=global_step, restore=False, sample_size=num_samples)
-            else:
-                agent.learn(step=global_step, restore=True, sample_size=num_samples)
-            """
             global_step += 1
             total_episode_reward += transition['reward']
 
         print ("episode: {} reward: {}".format(episode, total_episode_reward))
-        #agent.log_rewards(total_episode_reward, step=episode)
+        agent.log_rewards(total_episode_reward, step=episode)
