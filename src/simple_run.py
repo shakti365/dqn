@@ -42,11 +42,12 @@ agent.model = dqn
 num_episodes = 1000
 num_steps = 10
 num_samples = 64
-epsilon = np.logspace(start=1, stop=2, base=0.9, num=num_episodes)
+epsilon = np.logspace(start=1, stop=5, base=0.7, num=num_episodes)
 
 global_step = 0
 total_reward = 0
-
+exploration = 0
+exploitation = 0
 
 # Clear deafult graph stack and reset global graph definition.
 tf.reset_default_graph()
@@ -99,22 +100,26 @@ with tf.Session() as sess:
             transition = dict()
             transition['current_state'] = agent.get_state(agent.current_observation)
 
+            current_epsilon = epsilon[episode]
             # Epsilon greedy policy
-            if (random.uniform(0, 1) < epsilon[episode//10]) or (global_step == 0):
+            if (random.uniform(0, 1) < current_epsilon) or (global_step == 0):
                 # Get a random action.
                 transition['action'] = agent.get_action(agent.current_observation,
                                                        random=True)
+                exploration += 1
             else:
                 # Get recommended action from the policy
                 transition['action'] = sess.run(action, {current_states:
                                                       transition['current_state'].reshape(-1,4)})
+                exploitation += 1
+
 
             # Observe next state x and reward r
             transition['next_state'], transition['reward'], done = agent.get_transitions(transition['action'])
             if done is True:
-                transition['end'] = 1.0
-            else:
                 transition['end'] = 0.0
+            else:
+                transition['end'] = 1.0
 
             # Push transition to replay memory
             agent.memory.add_sample(episode, transition)
@@ -145,5 +150,9 @@ with tf.Session() as sess:
             global_step += 1
             total_episode_reward += transition['reward']
 
+
         print ("episode: {} reward: {}".format(episode, total_episode_reward))
-        agent.log_rewards(total_episode_reward, step=episode)
+        print(f"Step: {global_step},  Current Epsilon: {current_epsilon}")
+        print(f"Step: {global_step},  Exploration: {exploration/global_step}")
+        print(f"Step: {global_step},  Exploitation: {exploitation/global_step}")
+        agent.log_rewards(total_episode_reward, step=global_step)
