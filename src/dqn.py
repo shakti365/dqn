@@ -11,7 +11,7 @@ class DQN:
 
     def __init__(self, config):
         self.epochs = config['epochs']
-        self.learning_rate = config['learning_rate']
+        self.starter_learning_rate = config['learning_rate']
         self.target_update = config['target_update']
         self.gamma = config['gamma']
         self.model_name = config['model_name']
@@ -34,11 +34,11 @@ class DQN:
         }
 
         self.OPTIMIZERS = {
-            'sgd': tf.train.GradientDescentOptimizer(self.learning_rate),
-            'adam': tf.train.AdamOptimizer(self.learning_rate),
-            'sgd_mom': tf.train.MomentumOptimizer(self.learning_rate, momentum=0.9, use_nesterov=True),
-            'rmsprop': tf.train.RMSPropOptimizer(self.learning_rate),
-            'adagrad': tf.train.AdagradOptimizer(self.learning_rate)
+            'sgd': tf.train.GradientDescentOptimizer,
+            'adam': tf.train.AdamOptimizer,
+            'sgd_mom': tf.train.MomentumOptimizer,
+            'rmsprop': tf.train.RMSPropOptimizer,
+            'adagrad': tf.train.AdagradOptimizer
         }
 
         self.LOSSES = {
@@ -48,7 +48,7 @@ class DQN:
 
         if self.optimizer not in self.OPTIMIZERS.keys():
             raise ValueError("optimizer should be in {}".format(self.OPTIMIZERS.keys()))
-        
+
         if self.export_dir is None:
             raise ValueError("export_dir cannot be empty")
 
@@ -100,7 +100,9 @@ class DQN:
         """Computes the action-value function (Q value) at a given state and
         action"""
         with tf.variable_scope(variable_scope, reuse=tf.AUTO_REUSE):
-            q = tf.layers.dense(states, self.action_dim, activation=tf.nn.relu,
+            a = tf.layers.dense(states, 3, activation=tf.nn.relu,
+                                trainable=trainable)
+            q = tf.layers.dense(a, self.action_dim, activation=tf.nn.relu,
                                trainable=trainable)
             return q
 
@@ -131,10 +133,10 @@ class DQN:
 
                 td_target = tf.add(rewards, self.gamma * max_q_target * end)
 
-            td_error = td_target - q_primary
-            # TODO: error term clipping between -1 and 1
-            loss_op = tf.reduce_sum(tf.square(td_error))
- 
+            # td_error = td_target - q_primary
+            # loss_op = tf.reduce_sum(tf.square(td_error))
+            loss_op = tf.losses.huber_loss(labels=td_target,
+                                           predictions=q_primary)
             return loss_op
 
     def optimize_fn(self, loss_op):
@@ -157,14 +159,26 @@ class DQN:
             # Select the optimizer.
             optimizer = self.OPTIMIZERS[self.optimizer]
 
-            # Minimize loss based on optimizer. 
-            optimize_op = optimizer.minimize(loss_op)
+
+
+            self.global_step = tf.Variable(0, trainable=False)
+            self.learning_rate = tf.train.exponential_decay(self.starter_learning_rate,
+                                                           self.global_step, 10000,
+                                                           0.96, staircase=True)
+
+            op = optimizer(self.learning_rate)
+            # Minimize loss based on optimizer.
+            optimize_op = op.minimize(loss_op,
+                                      global_step=self.global_step)
 
             # Calculate gradients using the optimizer and the loss function.
-            gradients = optimizer.compute_gradients(loss_op)
+            gradients = op.compute_gradients(loss_op)
+
+            # Clip gradients of the loss to [-1, 1]
+            # clipped_gradients = [(tf.clip_by_value(grad, -1, 1), var) for grad, var in gradients]
 
             # Apply clipped gradients.
-            optimize_op = optimizer.apply_gradients(gradients)
+            optimize_op = op.apply_gradients(gradients)
 
             # Add summaries of gradients to tensorboard.
             utils.gradient_summaries(gradients)
