@@ -103,6 +103,12 @@ class Agent:
 
     def log_rewards(self, episode_total_reward, step):
         writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/reward')
-        summary = tf.Summary(value=[tf.Summary.Value(tag="average_reward",
+        summary = tf.Summary(value=[tf.Summary.Value(tag="reward",
                                                      simple_value=episode_total_reward)])
         writer.add_summary(summary, step)
+
+    def log_avg_rewards(self, avg_reward, episode):
+        writer = tf.summary.FileWriter(self.model.TF_SUMMARY_DIR+'/avgreward')
+        summary = tf.Summary(value=[tf.Summary.Value(tag="average_reward",
+                                                     simple_value=avg_reward)])
+        writer.add_summary(summary, episode)
